@@ -11,7 +11,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install requests
+      # 0.6.5 is the last release that runs without a license key
+      - run: pip install cloakbrowser==0.6.5
+      - run: python -m playwright install-deps chromium
       - run: python check.py
         env:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}

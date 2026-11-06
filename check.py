@@ -1,55 +1,56 @@
 # check.py
-import os, re, json, sys
-import requests
+import os, re, sys, urllib.request
+from cloakbrowser import launch  # stealth Chromium; plain requests gets Boots' bot wall
 
-URL = ("https://www.boots.com/shark-flexstyle-limited-edition-orchid-sunrise-"
-       "4-in-1-air-styler-and-hair-dryer-with-storage-bag-10387655")
+URLS = [
+    "https://www.boots.com/shark-flexstyle-limited-edition-orchid-sunrise-"
+    "4-in-1-air-styler-and-hair-dryer-with-storage-bag-10387655",
+    "https://www.boots.com/shark-flexstyle-4-in-1-air-styler-and-hair-dryer-"
+    "stone-hd436sluk-10359019",
+]
 NTFY_TOPIC = os.environ["NTFY_TOPIC"]
 
-HEADERS = {
-    "User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-                   "(KHTML, like Gecko) Chrome/124.0 Safari/537.36"),
-    "Accept": "text/html,application/xhtml+xml",
-    "Accept-Language": "en-GB,en;q=0.9",
-}
 
-def notify(msg):
-    requests.post(f"https://ntfy.sh/{NTFY_TOPIC}", data=msg.encode(),
-                  headers={"Title": "Boots stock alert", "Click": URL})
+def notify(msg, url):
+    urllib.request.urlopen(urllib.request.Request(
+        f"https://ntfy.sh/{NTFY_TOPIC}", data=msg.encode(),
+        headers={"Title": "Boots stock alert", "Click": url}), timeout=30)
+
 
 def in_stock(html):
-    # 1) Structured data, if the page has it
-    for block in re.findall(
-            r'<script type="application/ld\+json">(.*?)</script>', html, re.S):
-        try:
-            data = json.loads(block)
+    # Boots renders <input type="hidden" id="isInStock" value="true|false">
+    m = re.search(r'id="isInStock"\s+value="(true|false)"', html)
+    return None if not m else m.group(1) == "true"  # None: bot wall or page changed
+
+
+failed = False
+browser = launch()
+page = browser.new_page()
+for url in URLS:
+    name = url.rsplit("/", 1)[-1]
+    try:
+        r = page.goto(url, timeout=60_000)
+        try:  # bot-check JS can reload the page; wait for the stock field itself
+            page.wait_for_selector("#isInStock", state="attached", timeout=30_000)
         except Exception:
-            continue
-        for item in (data if isinstance(data, list) else [data]):
-            offers = item.get("offers") if isinstance(item, dict) else None
-            if isinstance(offers, dict):
-                offers = [offers]
-            for o in offers or []:
-                avail = str(o.get("availability", ""))
-                if "InStock" in avail:
-                    return True
-                if "OutOfStock" in avail:
-                    return False
-    # 2) Text fallback
-    text = html.lower()
-    if "stock coming soon" in text or "temporarily unavailable online" in text:
-        return False
-    return "add to basket" in text
+            pass  # in_stock() returns None below and we alert
+        html, status = page.content(), r.status if r else None
+        print(name, "Status:", status)
+        problem = None if status == 200 else f"HTTP {status}"
+    except Exception as e:
+        html, problem = "", f"page load failed: {e}"
 
-r = requests.get(URL, headers=HEADERS, timeout=30)
-print("Status:", r.status_code)
+    stock = in_stock(html) if not problem else None
+    if stock is None:
+        problem = problem or f"no stock info on page: {page.title()!r}"
+        print(" ", problem)
+        notify(f"Check failed for {name}: {problem}", url)
+        failed = True  # keep checking the others, fail the run at the end
+    elif stock:
+        notify(f"Back in stock: {url}", url)
+        print("  IN STOCK")
+    else:
+        print("  Still out of stock")
+browser.close()
 
-if r.status_code != 200:
-    print("Blocked or error, can't check.")
-    sys.exit(1)  # makes the GitHub Action show as failed
-
-if in_stock(r.text):
-    notify("It looks like the Shark FlexStyle is back in stock!")
-    print("IN STOCK")
-else:
-    print("Still out of stock")
+sys.exit(1 if failed else 0)  # makes the GitHub Action show as failed
