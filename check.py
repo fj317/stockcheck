@@ -23,7 +23,7 @@ def in_stock(html):
     return None if not m else m.group(1) == "true"  # None: bot wall or page changed
 
 
-failed = False
+failed, alerts = False, []  # (msg, url); sent as one ntfy message at the end
 browser = launch()
 page = browser.new_page()
 for url in URLS:
@@ -44,13 +44,18 @@ for url in URLS:
     if stock is None:
         problem = problem or f"no stock info on page: {page.title()!r}"
         print(" ", problem)
-        notify(f"Check failed for {name}: {problem}", url)
+        print("  page starts:", html[:500].replace("\n", " "))  # shows what the bot wall served
+        alerts.append((f"Check failed for {name}: {problem}", url))
         failed = True  # keep checking the others, fail the run at the end
     elif stock:
-        notify(f"Back in stock: {url}", url)
+        alerts.append((f"Back in stock: {url}", url))
         print("  IN STOCK")
     else:
         print("  Still out of stock")
 browser.close()
+
+if alerts:  # click opens the first in-stock product, else the first failed one
+    in_stock_urls = [u for m, u in alerts if m.startswith("Back")]
+    notify("\n\n".join(m for m, _ in alerts), (in_stock_urls or [alerts[0][1]])[0])
 
 sys.exit(1 if failed else 0)  # makes the GitHub Action show as failed
