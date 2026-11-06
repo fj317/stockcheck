@@ -34,7 +34,15 @@ for url in URLS:
             page.wait_for_selector("#isInStock", state="attached", timeout=30_000)
         except Exception:
             pass  # in_stock() returns None below and we alert
-        html, status = page.content(), r.status if r else None
+        for attempt in range(3):  # content() throws if the bot check reloads mid-read
+            try:
+                html = page.content()
+                break
+            except Exception:
+                if attempt == 2:
+                    raise
+                page.wait_for_load_state("load", timeout=30_000)
+        status = r.status if r else None
         print(name, "Status:", status)
         problem = None if status == 200 else f"HTTP {status}"
     except Exception as e:
