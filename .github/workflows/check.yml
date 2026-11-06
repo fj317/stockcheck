@@ -1,7 +1,7 @@
 name: check-page
 on:
   schedule:
-    - cron: "*/5 * * * *"
+    - cron: "*/15 * * * *"
   workflow_dispatch:
 jobs:
   run:
@@ -13,7 +13,10 @@ jobs:
           python-version: "3.12"
       # 0.6.5 is the last release that runs without a license key
       - run: pip install cloakbrowser==0.6.5
-      - run: python -m playwright install-deps chromium
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cloakbrowser  # the ~200 MB Chromium binary
+          key: cloakbrowser-0.6.5-${{ runner.os }}
       - run: python check.py
         env:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
