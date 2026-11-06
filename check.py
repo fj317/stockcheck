@@ -1,5 +1,6 @@
 # check.py
 import os, re, sys, urllib.request
+from datetime import datetime
 from cloakbrowser import launch  # stealth Chromium; plain requests gets Boots' bot wall
 
 URLS = [
@@ -23,6 +24,7 @@ def in_stock(html):
     return None if not m else m.group(1) == "true"  # None: bot wall or page changed
 
 
+print("Run", datetime.now().strftime("%Y-%m-%d %H:%M"))
 failed, alerts = False, []  # (msg, url); sent as one ntfy message at the end
 browser = launch()
 page = browser.new_page()
