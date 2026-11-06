@@ -1,7 +1,6 @@
 name: check-page
 on:
-  schedule:
-    - cron: "*/15 * * * *"
+  # schedule removed: Boots' Incapsula bot wall blocks GitHub runner IPs; runs via local cron instead
   workflow_dispatch:
 jobs:
   run:
