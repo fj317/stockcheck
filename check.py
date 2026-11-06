@@ -4,10 +4,8 @@ from datetime import datetime
 from cloakbrowser import launch  # stealth Chromium; plain requests gets Boots' bot wall
 
 URLS = [
-    "https://www.boots.com/shark-flexstyle-limited-edition-orchid-sunrise-"
-    "4-in-1-air-styler-and-hair-dryer-with-storage-bag-10387655",
-    "https://www.boots.com/shark-flexstyle-4-in-1-air-styler-and-hair-dryer-"
-    "stone-hd436sluk-10359019",
+    "https://www.boots.com/shark-flexstyle-limited-edition-orchid-sunrise-4-in-1-air-styler-and-hair-dryer-with-storage-bag-10387655",
+    "https://www.boots.com/shark-flexstyle-4-in-1-air-styler-and-hair-dryer-stone-hd436sluk-10359019",
 ]
 NTFY_TOPIC = os.environ["NTFY_TOPIC"]
 
