@@ -4,7 +4,7 @@ import requests
 
 URL = ("https://www.boots.com/shark-flexstyle-limited-edition-orchid-sunrise-"
        "4-in-1-air-styler-and-hair-dryer-with-storage-bag-10387655")
-NTFY_TOPIC = "stockcheck"
+NTFY_TOPIC = os.environ["NTFY_TOPIC"]
 
 HEADERS = {
     "User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
